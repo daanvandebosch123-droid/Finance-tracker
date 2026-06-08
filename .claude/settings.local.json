@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\daanv\\\\Documents\\\\FinancePage\" -Recurse -Force | ForEach-Object { $_.FullName })"
+    ]
+  }
+}
