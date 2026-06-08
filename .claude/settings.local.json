@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(dir *)",
-      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\daanv\\\\Documents\\\\FinancePage\" -Recurse -Force | ForEach-Object { $_.FullName })"
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\daanv\\\\Documents\\\\FinancePage\" -Recurse -Force | ForEach-Object { $_.FullName })",
+      "PowerShell(npm install *)",
+      "Bash(Get-Content \"C:\\\\Users\\\\daanv\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-daanv-Documents-FinancePage\\\\b29c4a6c-72d2-47ab-902c-43b73b55418c\\\\tasks\\\\bxde1znp1.output\" -Wait)",
+      "Bash(Select-String -Pattern \".\")",
+      "PowerShell(cd \"C:\\\\Users\\\\daanv\\\\Documents\\\\FinancePage\"; $key = \\(Get-Content .env.local | Where-Object { $_ -match \"NEXT_PUBLIC_SUPABASE_ANON_KEY\" }\\) -replace \"NEXT_PUBLIC_SUPABASE_ANON_KEY=\", \"\"; Write-Host \"Key found: $\\($key.Length\\) chars\")",
+      "PowerShell(vercel env *)",
+      "PowerShell(cd \"C:\\\\Users\\\\daanv\\\\Documents\\\\FinancePage\"; $content = Get-Content .env.local -Raw -Encoding UTF8; $key = \\($content -split \"`n\" | Where-Object { $_ -match \"^NEXT_PUBLIC_SUPABASE_ANON_KEY=\" }\\) -replace \"^NEXT_PUBLIC_SUPABASE_ANON_KEY=\", \"\" -replace \"`r\", \"\" -replace \"`n\", \"\"; Write-Host \"Length: $\\($key.Length\\)\"; Write-Host \"First 10: $\\($key.Substring\\(0,10\\)\\)\")",
+      "PowerShell(Get-Content *)"
     ]
   }
 }

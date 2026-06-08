@@ -164,9 +164,16 @@ export default function TransactionsPage() {
                       {t.category}
                     </span>
                     <div className="min-w-0">
-                      <p className="text-sm text-slate-800 truncate">
-                        {t.description || t.category}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm text-slate-800 truncate">
+                          {t.description || t.category}
+                        </p>
+                        {t.shared && (
+                          <span className="text-xs px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded font-medium shrink-0">
+                            shared
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-slate-400">
                         {(t.profiles as { name: string } | null)?.name} ·{' '}
                         {new Date(t.date).toLocaleDateString('en-GB', {

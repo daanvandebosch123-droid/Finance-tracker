@@ -18,6 +18,7 @@ export default function AddTransactionModal({ onClose, onSuccess, householdId, u
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [selectedUserId, setSelectedUserId] = useState(userId)
   const [members, setMembers] = useState<Profile[]>([])
+  const [shared, setShared] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [addingCategory, setAddingCategory] = useState(false)
@@ -41,6 +42,7 @@ export default function AddTransactionModal({ onClose, onSuccess, householdId, u
 
   useEffect(() => {
     setCategory('')
+    setShared(false)
     setAddingCategory(false)
     setNewCategoryName('')
   }, [type])
@@ -93,6 +95,7 @@ export default function AddTransactionModal({ onClose, onSuccess, householdId, u
       category,
       description: description.trim() || null,
       date,
+      shared: type === 'expense' ? shared : false,
     })
 
     if (err) {
@@ -253,6 +256,29 @@ export default function AddTransactionModal({ onClose, onSuccess, householdId, u
               required
             />
           </div>
+
+          {/* Shared toggle — expenses only */}
+          {type === 'expense' && (
+            <button
+              type="button"
+              onClick={() => setShared((s) => !s)}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border transition-colors ${
+                shared
+                  ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                  : 'bg-white border-slate-200 text-slate-600'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span className="text-sm font-medium">Shared expense</span>
+              </div>
+              <div className={`w-9 h-5 rounded-full transition-colors relative ${shared ? 'bg-indigo-600' : 'bg-slate-200'}`}>
+                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${shared ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              </div>
+            </button>
+          )}
 
           {error && <p className="text-rose-500 text-sm">{error}</p>}
 

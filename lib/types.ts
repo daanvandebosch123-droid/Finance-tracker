@@ -21,6 +21,7 @@ export interface Transaction {
   category: string
   description: string | null
   date: string
+  shared: boolean
   created_at: string
   profiles?: { name: string } | null
 }
