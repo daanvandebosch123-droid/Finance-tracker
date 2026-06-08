@@ -71,12 +71,6 @@ export default function DashboardPage() {
     .reduce((sum, t) => sum + t.amount, 0)
   const net = totalIncome - totalExpenses
 
-  const myExpenses = expenses
-    .filter((t) => t.user_id === user?.id)
-    .reduce((sum, t) => sum + t.amount, 0)
-  const partnerExpenses = totalExpenses - myExpenses
-  const balance = myExpenses - totalExpenses / 2
-  const partner = members.find((m) => m.id !== user?.id)
 
   const byCategory = expenses.reduce<Record<string, number>>((acc, t) => {
     acc[t.category] = (acc[t.category] || 0) + t.amount
@@ -138,45 +132,32 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-          {/* Balance between partners */}
+          {/* Spending per person */}
           <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
-            <p className="text-sm font-medium text-slate-700 mb-4">Balance</p>
+            <p className="text-sm font-medium text-slate-700 mb-4">Spent by</p>
             {totalExpenses === 0 ? (
               <p className="text-sm text-slate-400">No expenses this month</p>
             ) : (
-              <>
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-600">{profile?.name ?? 'You'}</span>
-                    <span className="font-medium text-slate-800">{fmt(myExpenses)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-600">{partner?.name ?? 'Partner'}</span>
-                    <span className="font-medium text-slate-800">{fmt(partnerExpenses)}</span>
-                  </div>
-                </div>
-                {partner && Math.abs(balance) >= 0.01 && (
-                  <div
-                    className={`text-sm font-medium rounded-lg px-3 py-2 ${
-                      balance > 0
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : 'bg-rose-50 text-rose-600'
-                    }`}
-                  >
-                    {balance > 0
-                      ? `${partner.name} owes you ${fmt(balance)}`
-                      : `You owe ${partner.name} ${fmt(Math.abs(balance))}`}
-                  </div>
+              <div className="space-y-3">
+                {members.map((m) => {
+                  const spent = expenses.filter((t) => t.user_id === m.id).reduce((sum, t) => sum + t.amount, 0)
+                  const pct = totalExpenses > 0 ? (spent / totalExpenses) * 100 : 0
+                  return (
+                    <div key={m.id}>
+                      <div className="flex justify-between items-center text-sm mb-1">
+                        <span className="text-slate-600">{m.name}</span>
+                        <span className="font-medium text-slate-800">{fmt(spent)}</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-1.5">
+                        <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
+                {members.length < 2 && (
+                  <p className="text-xs text-slate-400 mt-1">Waiting for partner to join</p>
                 )}
-                {balance === 0 && partner && (
-                  <div className="text-sm font-medium rounded-lg px-3 py-2 bg-slate-50 text-slate-600">
-                    All even!
-                  </div>
-                )}
-                {!partner && (
-                  <p className="text-sm text-slate-400">Waiting for partner to join</p>
-                )}
-              </>
+              </div>
             )}
           </div>
 
