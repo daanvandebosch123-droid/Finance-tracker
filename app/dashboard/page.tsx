@@ -65,12 +65,14 @@ export default function DashboardPage() {
   }
 
   const expenses = transactions.filter((t) => t.type === 'expense')
+  const personalExpenses = expenses.filter((t) => !t.shared)
+  const sharedExpenses = expenses.filter((t) => t.shared)
+  const totalShared = sharedExpenses.reduce((sum, t) => sum + t.amount, 0)
   const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0)
   const totalIncome = transactions
     .filter((t) => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0)
   const net = totalIncome - totalExpenses
-
 
   const byCategory = expenses.reduce<Record<string, number>>((acc, t) => {
     acc[t.category] = (acc[t.category] || 0) + t.amount
@@ -140,7 +142,7 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 {members.map((m) => {
-                  const spent = expenses.filter((t) => t.user_id === m.id).reduce((sum, t) => sum + t.amount, 0)
+                  const spent = personalExpenses.filter((t) => t.user_id === m.id).reduce((sum, t) => sum + t.amount, 0)
                   const pct = totalExpenses > 0 ? (spent / totalExpenses) * 100 : 0
                   return (
                     <div key={m.id}>
@@ -154,6 +156,25 @@ export default function DashboardPage() {
                     </div>
                   )
                 })}
+                {totalShared > 0 && (
+                  <div>
+                    <div className="flex justify-between items-center text-sm mb-1">
+                      <span className="flex items-center gap-1.5 text-slate-600">
+                        Shared
+                        <span className="text-xs px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded font-medium">
+                          {sharedExpenses.length}
+                        </span>
+                      </span>
+                      <span className="font-medium text-slate-800">{fmt(totalShared)}</span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-1.5">
+                      <div
+                        className="bg-indigo-300 h-1.5 rounded-full"
+                        style={{ width: `${(totalShared / totalExpenses) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
                 {members.length < 2 && (
                   <p className="text-xs text-slate-400 mt-1">Waiting for partner to join</p>
                 )}
