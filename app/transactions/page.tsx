@@ -129,7 +129,7 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-slate-300">
       <Navbar />
       <main className="max-w-4xl mx-auto px-3 sm:px-4 py-5 sm:py-8 pb-24 sm:pb-8">
         {/* Header */}

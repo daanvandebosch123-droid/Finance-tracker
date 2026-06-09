@@ -174,9 +174,9 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-300">
       <Navbar />
-      <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+      <main className="max-w-2xl mx-auto px-3 sm:px-4 py-5 sm:py-8 pb-24 sm:pb-8 space-y-6">
         <h1 className="text-xl font-bold text-slate-900">Settings</h1>
 
         {/* Profile */}

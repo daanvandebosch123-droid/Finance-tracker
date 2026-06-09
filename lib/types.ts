@@ -22,6 +22,8 @@ export interface Transaction {
   description: string | null
   date: string
   shared: boolean
+  reimbursement_amount: number | null
+  reimbursement_received: boolean
   created_at: string
   profiles?: { name: string } | null
 }

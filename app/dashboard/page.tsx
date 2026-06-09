@@ -7,6 +7,10 @@ import Navbar from '@/components/Navbar'
 import AddTransactionModal from '@/components/AddTransactionModal'
 import { Transaction, Profile } from '@/lib/types'
 import { MONTHS, CATEGORY_COLORS, fmt } from '@/lib/constants'
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+  PieChart, Pie, Legend,
+} from 'recharts'
 
 export default function DashboardPage() {
   const { user, profile, loading } = useAuth()
@@ -95,6 +99,21 @@ export default function DashboardPage() {
   }, {})
   const topCategories = Object.entries(byCategory).sort((a, b) => b[1] - a[1])
 
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const dailyData = Array.from({ length: daysInMonth }, (_, i) => {
+    const day = i + 1
+    const dayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    const amount = expenses.filter((t) => t.date === dayStr).reduce((sum, t) => sum + effectiveAmount(t), 0)
+    return { day: String(day), amount: Math.round(amount * 100) / 100 }
+  })
+
+  const CHART_COLORS = ['#6366f1', '#f43f5e', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6']
+  const pieData = topCategories.slice(0, 6).map(([name, value], i) => ({
+    name,
+    value: Math.round(value * 100) / 100,
+    color: CHART_COLORS[i % CHART_COLORS.length],
+  }))
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -104,7 +123,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-slate-300">
       <Navbar />
       <main className="max-w-4xl mx-auto px-3 sm:px-4 py-5 sm:py-8 pb-24 sm:pb-8">
         {/* Month selector */}
@@ -173,6 +192,40 @@ export default function DashboardPage() {
           </button>
         )}
 
+        {/* Daily spending chart */}
+        {expenses.length > 0 && (
+          <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-sm mb-4 sm:mb-6">
+            <p className="text-sm font-medium text-slate-700 mb-4">Daily spending</p>
+            <ResponsiveContainer width="100%" height={140}>
+              <BarChart data={dailyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <XAxis
+                  dataKey="day"
+                  tick={{ fontSize: 10, fill: '#94a3b8' }}
+                  tickLine={false}
+                  axisLine={false}
+                  interval={4}
+                />
+                <YAxis
+                  tick={{ fontSize: 10, fill: '#94a3b8' }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v) => `€${v}`}
+                />
+                <Tooltip
+                  formatter={(value: number) => [fmt(value), 'Spent']}
+                  labelFormatter={(label) => `Day ${label}`}
+                  contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
+                />
+                <Bar dataKey="amount" radius={[3, 3, 0, 0]}>
+                  {dailyData.map((entry, i) => (
+                    <Cell key={i} fill={entry.amount > 0 ? '#6366f1' : '#e2e8f0'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {/* Spending per person */}
           <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-sm">
@@ -222,26 +275,35 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Top categories */}
+          {/* Category donut chart */}
           <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-sm">
-            <p className="text-sm font-medium text-slate-700 mb-4">Top categories</p>
-            {topCategories.length === 0 ? (
-              <p className="text-sm text-slate-400">No expenses yet</p>
+            <p className="text-sm font-medium text-slate-700 mb-2">By category</p>
+            {pieData.length === 0 ? (
+              <p className="text-sm text-slate-400 mt-4">No expenses yet</p>
             ) : (
-              <div className="space-y-3">
-                {topCategories.slice(0, 4).map(([cat, amt]) => (
-                  <div key={cat} className="flex items-center justify-between">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        CATEGORY_COLORS[cat] ?? 'bg-slate-100 text-slate-700'
-                      }`}
-                    >
-                      {cat}
-                    </span>
-                    <span className="text-sm font-medium text-slate-700">{fmt(amt)}</span>
-                  </div>
-                ))}
-              </div>
+              <ResponsiveContainer width="100%" height={180}>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={45}
+                    outerRadius={68}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => fmt(value)} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }} />
+                  <Legend
+                    iconType="circle"
+                    iconSize={8}
+                    formatter={(value) => <span style={{ fontSize: 11, color: '#475569' }}>{value}</span>}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             )}
           </div>
         </div>
