@@ -109,7 +109,8 @@ export default function TransactionsPage() {
       personalByUser.get(t.user_id)!.txns.push(t)
     }
   }
-  const userOrder = [user!.id, ...Array.from(personalByUser.keys()).filter((id) => id !== user!.id)]
+  const userId = user?.id ?? ''
+  const userOrder = [userId, ...Array.from(personalByUser.keys()).filter((id) => id !== userId)]
   const sections: { label: string; txns: Transaction[] }[] = [
     ...userOrder.flatMap((uid) => {
       const entry = personalByUser.get(uid)
