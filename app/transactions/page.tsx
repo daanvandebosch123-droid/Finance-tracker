@@ -79,15 +79,44 @@ export default function TransactionsPage() {
   }
 
   const filtered = transactions.filter((t) => filter === 'all' || t.type === filter)
-  const totalShown = filtered.reduce((sum, t) => {
-    if (t.type === 'expense') {
-      const effective = t.reimbursement_received && t.reimbursement_amount
-        ? t.amount - t.reimbursement_amount
-        : t.amount
-      return sum - effective
+
+  function effectiveNet(txns: Transaction[]) {
+    return txns.reduce((sum, t) => {
+      if (t.type === 'expense') {
+        const eff = t.reimbursement_received && t.reimbursement_amount
+          ? t.amount - t.reimbursement_amount
+          : t.amount
+        return sum - eff
+      }
+      return sum + t.amount
+    }, 0)
+  }
+
+  const totalShown = effectiveNet(filtered)
+
+  const personalByUser = new Map<string, { name: string; txns: Transaction[] }>()
+  const sharedTxns: Transaction[] = []
+  for (const t of filtered) {
+    if (t.shared) {
+      sharedTxns.push(t)
+    } else {
+      if (!personalByUser.has(t.user_id)) {
+        personalByUser.set(t.user_id, {
+          name: (t.profiles as { name: string } | null)?.name ?? 'Unknown',
+          txns: [],
+        })
+      }
+      personalByUser.get(t.user_id)!.txns.push(t)
     }
-    return sum + t.amount
-  }, 0)
+  }
+  const userOrder = [user!.id, ...Array.from(personalByUser.keys()).filter((id) => id !== user!.id)]
+  const sections: { label: string; txns: Transaction[] }[] = [
+    ...userOrder.flatMap((uid) => {
+      const entry = personalByUser.get(uid)
+      return entry ? [{ label: entry.name, txns: entry.txns }] : []
+    }),
+    ...(sharedTxns.length > 0 ? [{ label: 'Shared', txns: sharedTxns }] : []),
+  ]
 
   if (loading) {
     return (
@@ -165,102 +194,104 @@ export default function TransactionsPage() {
               <p className="text-xs text-slate-400 mt-1">Tap + to add one</p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
-              {filtered.map((t) => (
-                <div
-                  key={t.id}
-                  className="px-4 sm:px-5 py-3.5 group hover:bg-slate-50 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
-                          CATEGORY_COLORS[t.category] ?? 'bg-slate-100 text-slate-700'
-                        }`}
-                      >
-                        {t.category}
+            <div>
+              {sections.map(({ label, txns }, si) => {
+                const net = effectiveNet(txns)
+                return (
+                  <div key={label} className={si > 0 ? 'border-t border-slate-200' : ''}>
+                    <div className="px-4 sm:px-5 py-2 bg-slate-50 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</span>
+                      <span className={`text-xs font-semibold ${net >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                        {net >= 0 ? '+' : ''}{fmt(net)}
                       </span>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-sm text-slate-800 truncate">
-                            {t.description || t.category}
-                          </p>
-                          {t.shared && (
-                            <span className="text-xs px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded font-medium shrink-0">
-                              shared
-                            </span>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                      {txns.map((t) => (
+                        <div
+                          key={t.id}
+                          className="px-4 sm:px-5 py-3.5 group hover:bg-slate-50 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                              <span
+                                className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                                  CATEGORY_COLORS[t.category] ?? 'bg-slate-100 text-slate-700'
+                                }`}
+                              >
+                                {t.category}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-sm text-slate-800 truncate">
+                                  {t.description || t.category}
+                                </p>
+                                <p className="text-xs text-slate-400">
+                                  {new Date(t.date).toLocaleDateString('en-GB', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 ml-3">
+                              <span
+                                className={`text-sm font-semibold ${
+                                  t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'
+                                }`}
+                              >
+                                {t.type === 'income' ? '+' : '-'}
+                                {fmt(t.amount)}
+                              </span>
+                              <button
+                                onClick={() => handleDelete(t.id)}
+                                disabled={deleting === t.id}
+                                className="sm:opacity-0 sm:group-hover:opacity-100 p-1.5 rounded-lg hover:bg-rose-50 text-slate-300 hover:text-rose-500 transition-all disabled:opacity-50"
+                              >
+                                {deleting === t.id ? (
+                                  <div className="w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Reimbursement row */}
+                          {t.reimbursement_amount != null && (
+                            <div className="mt-2 flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <svg className="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
+                                </svg>
+                                <span className={`text-xs ${t.reimbursement_received ? 'text-emerald-600 line-through' : 'text-amber-600'}`}>
+                                  {fmt(t.reimbursement_amount)} back from friends
+                                </span>
+                                {!t.reimbursement_received && (
+                                  <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">
+                                    pending
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => toggleReimbursement(t)}
+                                className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                                  t.reimbursement_received
+                                    ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                                    : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                }`}
+                              >
+                                {t.reimbursement_received ? '✓ Received' : 'Mark received'}
+                              </button>
+                            </div>
                           )}
                         </div>
-                        <p className="text-xs text-slate-400">
-                          {(t.profiles as { name: string } | null)?.name} ·{' '}
-                          {new Date(t.date).toLocaleDateString('en-GB', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-3">
-                      <span
-                        className={`text-sm font-semibold ${
-                          t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'
-                        }`}
-                      >
-                        {t.type === 'income' ? '+' : '-'}
-                        {fmt(t.amount)}
-                      </span>
-                      <button
-                        onClick={() => handleDelete(t.id)}
-                        disabled={deleting === t.id}
-                        className="sm:opacity-0 sm:group-hover:opacity-100 p-1.5 rounded-lg hover:bg-rose-50 text-slate-300 hover:text-rose-500 transition-all disabled:opacity-50"
-                      >
-                        {deleting === t.id ? (
-                          <div className="w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                        )}
-                      </button>
+                      ))}
                     </div>
                   </div>
-
-                  {/* Reimbursement row */}
-                  {t.reimbursement_amount != null && (
-                    <div className="mt-2 ml-0 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <svg className="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
-                        </svg>
-                        <span className={`text-xs ${t.reimbursement_received ? 'text-emerald-600 line-through' : 'text-amber-600'}`}>
-                          {fmt(t.reimbursement_amount)} back from friends
-                        </span>
-                        {!t.reimbursement_received && (
-                          <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">
-                            pending
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => toggleReimbursement(t)}
-                        className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${
-                          t.reimbursement_received
-                            ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                            : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
-                        }`}
-                      >
-                        {t.reimbursement_received ? '✓ Received' : 'Mark received'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
