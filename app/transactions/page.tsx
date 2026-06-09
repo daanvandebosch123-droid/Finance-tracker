@@ -20,6 +20,7 @@ export default function TransactionsPage() {
   const [filter, setFilter] = useState<Filter>('all')
   const [fetching, setFetching] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
 
   useEffect(() => {
@@ -184,118 +185,124 @@ export default function TransactionsPage() {
           )}
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-          {fetching ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="py-16 text-center">
-              <p className="text-sm text-slate-500">No transactions found</p>
-              <p className="text-xs text-slate-400 mt-1">Tap + to add one</p>
-            </div>
-          ) : (
-            <div>
-              {sections.map(({ label, txns }, si) => {
-                const net = effectiveNet(txns)
-                return (
-                  <div key={label} className={si > 0 ? 'border-t border-slate-200' : ''}>
-                    <div className="px-4 sm:px-5 py-2 bg-slate-50 flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</span>
-                      <span className={`text-xs font-semibold ${net >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                        {net >= 0 ? '+' : ''}{fmt(net)}
-                      </span>
-                    </div>
-                    <div className="divide-y divide-slate-100">
-                      {txns.map((t) => (
-                        <div
-                          key={t.id}
-                          className="px-4 sm:px-5 py-3.5 group hover:bg-slate-50 transition-colors"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                              <span
-                                className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
-                                  CATEGORY_COLORS[t.category] ?? 'bg-slate-100 text-slate-700'
-                                }`}
-                              >
-                                {t.category}
-                              </span>
-                              <div className="min-w-0">
-                                <p className="text-sm text-slate-800 truncate">
-                                  {t.description || t.category}
-                                </p>
-                                <p className="text-xs text-slate-400">
-                                  {new Date(t.date).toLocaleDateString('en-GB', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: 'numeric',
-                                  })}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0 ml-3">
-                              <span
-                                className={`text-sm font-semibold ${
-                                  t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'
-                                }`}
-                              >
-                                {t.type === 'income' ? '+' : '-'}
-                                {fmt(t.amount)}
-                              </span>
-                              <button
-                                onClick={() => handleDelete(t.id)}
-                                disabled={deleting === t.id}
-                                className="sm:opacity-0 sm:group-hover:opacity-100 p-1.5 rounded-lg hover:bg-rose-50 text-slate-300 hover:text-rose-500 transition-all disabled:opacity-50"
-                              >
-                                {deleting === t.id ? (
-                                  <div className="w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full animate-spin" />
-                                ) : (
-                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                  </svg>
-                                )}
-                              </button>
+        {fetching ? (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex items-center justify-center py-16">
+            <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm py-16 text-center">
+            <p className="text-sm text-slate-500">No transactions found</p>
+            <p className="text-xs text-slate-400 mt-1">Tap + to add one</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {sections.map(({ label, txns }) => {
+              const net = effectiveNet(txns)
+              return (
+                <div key={label} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="px-4 sm:px-5 py-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between">
+                    <span className="text-sm font-semibold text-slate-700">{label}</span>
+                    <span className={`text-sm font-semibold ${net >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                      {net >= 0 ? '+' : ''}{fmt(net)}
+                    </span>
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {txns.map((t) => (
+                      <div
+                        key={t.id}
+                        className="px-4 sm:px-5 py-3.5 group hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                                CATEGORY_COLORS[t.category] ?? 'bg-slate-100 text-slate-700'
+                              }`}
+                            >
+                              {t.category}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-sm text-slate-800 truncate">
+                                {t.description || t.category}
+                              </p>
+                              <p className="text-xs text-slate-400">
+                                {new Date(t.date).toLocaleDateString('en-GB', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                })}
+                              </p>
                             </div>
                           </div>
-
-                          {/* Reimbursement row */}
-                          {t.reimbursement_amount != null && (
-                            <div className="mt-2 flex items-center justify-between">
-                              <div className="flex items-center gap-1.5">
-                                <svg className="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
+                          <div className="flex items-center gap-1 shrink-0 ml-3">
+                            <span
+                              className={`text-sm font-semibold ${
+                                t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'
+                              }`}
+                            >
+                              {t.type === 'income' ? '+' : '-'}
+                              {fmt(t.amount)}
+                            </span>
+                            <button
+                              onClick={() => setEditingTransaction(t)}
+                              className="sm:opacity-0 sm:group-hover:opacity-100 p-1.5 rounded-lg hover:bg-indigo-50 text-slate-300 hover:text-indigo-500 transition-all"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(t.id)}
+                              disabled={deleting === t.id}
+                              className="sm:opacity-0 sm:group-hover:opacity-100 p-1.5 rounded-lg hover:bg-rose-50 text-slate-300 hover:text-rose-500 transition-all disabled:opacity-50"
+                            >
+                              {deleting === t.id ? (
+                                <div className="w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
-                                <span className={`text-xs ${t.reimbursement_received ? 'text-emerald-600 line-through' : 'text-amber-600'}`}>
-                                  {fmt(t.reimbursement_amount)} back from friends
-                                </span>
-                                {!t.reimbursement_received && (
-                                  <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">
-                                    pending
-                                  </span>
-                                )}
-                              </div>
-                              <button
-                                onClick={() => toggleReimbursement(t)}
-                                className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${
-                                  t.reimbursement_received
-                                    ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                                    : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
-                                }`}
-                              >
-                                {t.reimbursement_received ? '✓ Received' : 'Mark received'}
-                              </button>
-                            </div>
-                          )}
+                              )}
+                            </button>
+                          </div>
                         </div>
-                      ))}
-                    </div>
+
+                        {/* Reimbursement row */}
+                        {t.reimbursement_amount != null && (
+                          <div className="mt-2 flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <svg className="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
+                              </svg>
+                              <span className={`text-xs ${t.reimbursement_received ? 'text-emerald-600 line-through' : 'text-amber-600'}`}>
+                                {fmt(t.reimbursement_amount)} back from friends
+                              </span>
+                              {!t.reimbursement_received && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">
+                                  pending
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => toggleReimbursement(t)}
+                              className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                                t.reimbursement_received
+                                  ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                                  : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                              }`}
+                            >
+                              {t.reimbursement_received ? '✓ Received' : 'Mark received'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </main>
 
       <button
@@ -310,12 +317,19 @@ export default function TransactionsPage() {
       {showModal && (
         <AddTransactionModal
           onClose={() => setShowModal(false)}
-          onSuccess={() => {
-            setShowModal(false)
-            fetchData()
-          }}
+          onSuccess={() => { setShowModal(false); fetchData() }}
           householdId={profile!.household_id!}
-          userId={user!.id}
+          userId={user?.id ?? ''}
+        />
+      )}
+
+      {editingTransaction && (
+        <AddTransactionModal
+          onClose={() => setEditingTransaction(null)}
+          onSuccess={() => { setEditingTransaction(null); fetchData() }}
+          householdId={profile!.household_id!}
+          userId={user?.id ?? ''}
+          transaction={editingTransaction}
         />
       )}
     </div>
