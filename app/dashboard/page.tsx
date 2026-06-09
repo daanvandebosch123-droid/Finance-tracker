@@ -212,7 +212,7 @@ export default function DashboardPage() {
                   tickFormatter={(v) => `€${v}`}
                 />
                 <Tooltip
-                  formatter={(value: number) => [fmt(value), 'Spent']}
+                  formatter={(value) => [fmt(Number(value)), 'Spent']}
                   labelFormatter={(label) => `Day ${label}`}
                   contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
                 />
@@ -296,7 +296,7 @@ export default function DashboardPage() {
                       <Cell key={i} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => fmt(value)} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }} />
+                  <Tooltip formatter={(value) => fmt(Number(value))} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }} />
                   <Legend
                     iconType="circle"
                     iconSize={8}
