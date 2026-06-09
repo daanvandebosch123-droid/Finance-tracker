@@ -67,15 +67,30 @@ export default function DashboardPage() {
   const expenses = transactions.filter((t) => t.type === 'expense')
   const personalExpenses = expenses.filter((t) => !t.shared)
   const sharedExpenses = expenses.filter((t) => t.shared)
-  const totalShared = sharedExpenses.reduce((sum, t) => sum + t.amount, 0)
-  const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0)
+
+  function effectiveAmount(t: Transaction) {
+    return t.reimbursement_received && t.reimbursement_amount
+      ? t.amount - t.reimbursement_amount
+      : t.amount
+  }
+
+  const totalShared = sharedExpenses.reduce((sum, t) => sum + effectiveAmount(t), 0)
+  const totalExpenses = expenses.reduce((sum, t) => sum + effectiveAmount(t), 0)
   const totalIncome = transactions
     .filter((t) => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0)
   const net = totalIncome - totalExpenses
 
+  const pendingReimbursements = expenses.filter(
+    (t) => t.reimbursement_amount != null && !t.reimbursement_received
+  )
+  const totalPendingReimbursement = pendingReimbursements.reduce(
+    (sum, t) => sum + (t.reimbursement_amount ?? 0),
+    0
+  )
+
   const byCategory = expenses.reduce<Record<string, number>>((acc, t) => {
-    acc[t.category] = (acc[t.category] || 0) + t.amount
+    acc[t.category] = (acc[t.category] || 0) + effectiveAmount(t)
     return acc
   }, {})
   const topCategories = Object.entries(byCategory).sort((a, b) => b[1] - a[1])
@@ -89,11 +104,11 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-100">
       <Navbar />
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-4xl mx-auto px-3 sm:px-4 py-5 sm:py-8 pb-24 sm:pb-8">
         {/* Month selector */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-5 sm:mb-8">
           <button
             onClick={prevMonth}
             className="p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all text-slate-400 hover:text-slate-700"
@@ -102,7 +117,7 @@ export default function DashboardPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h2 className="text-xl font-semibold text-slate-900">
+          <h2 className="text-lg sm:text-xl font-semibold text-slate-900">
             {MONTHS[month]} {year}
           </h2>
           <button
@@ -116,33 +131,58 @@ export default function DashboardPage() {
         </div>
 
         {/* Summary cards */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Income</p>
-            <p className="text-2xl font-bold text-emerald-600">{fmt(totalIncome)}</p>
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+          <div className="bg-white rounded-xl p-3 sm:p-5 border border-slate-200 shadow-sm">
+            <p className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wide mb-1 sm:mb-2">Income</p>
+            <p className="text-lg sm:text-2xl font-bold text-emerald-600">{fmt(totalIncome)}</p>
           </div>
-          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Expenses</p>
-            <p className="text-2xl font-bold text-rose-500">{fmt(totalExpenses)}</p>
+          <div className="bg-white rounded-xl p-3 sm:p-5 border border-slate-200 shadow-sm">
+            <p className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wide mb-1 sm:mb-2">Expenses</p>
+            <p className="text-lg sm:text-2xl font-bold text-rose-500">{fmt(totalExpenses)}</p>
           </div>
-          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Net</p>
-            <p className={`text-2xl font-bold ${net >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+          <div className="bg-white rounded-xl p-3 sm:p-5 border border-slate-200 shadow-sm">
+            <p className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wide mb-1 sm:mb-2">Net</p>
+            <p className={`text-lg sm:text-2xl font-bold ${net >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
               {fmt(net)}
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        {/* Pending reimbursements banner */}
+        {totalPendingReimbursement > 0 && (
+          <button
+            onClick={() => router.push('/transactions')}
+            className="w-full flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 sm:mb-5 hover:bg-amber-100 transition-colors"
+          >
+            <div className="flex items-center gap-2.5">
+              <svg className="w-4 h-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
+              </svg>
+              <div className="text-left">
+                <p className="text-sm font-medium text-amber-800">
+                  Friends owe you {fmt(totalPendingReimbursement)}
+                </p>
+                <p className="text-xs text-amber-600">
+                  {pendingReimbursements.length} pending reimbursement{pendingReimbursements.length !== 1 ? 's' : ''} · tap to mark received
+                </p>
+              </div>
+            </div>
+            <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {/* Spending per person */}
-          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
+          <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-sm">
             <p className="text-sm font-medium text-slate-700 mb-4">Spent by</p>
             {totalExpenses === 0 ? (
               <p className="text-sm text-slate-400">No expenses this month</p>
             ) : (
               <div className="space-y-3">
                 {members.map((m) => {
-                  const spent = personalExpenses.filter((t) => t.user_id === m.id).reduce((sum, t) => sum + t.amount, 0)
+                  const spent = personalExpenses.filter((t) => t.user_id === m.id).reduce((sum, t) => sum + effectiveAmount(t), 0)
                   const pct = totalExpenses > 0 ? (spent / totalExpenses) * 100 : 0
                   return (
                     <div key={m.id}>
@@ -183,7 +223,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Top categories */}
-          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
+          <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-sm">
             <p className="text-sm font-medium text-slate-700 mb-4">Top categories</p>
             {topCategories.length === 0 ? (
               <p className="text-sm text-slate-400">No expenses yet</p>
@@ -207,8 +247,8 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent transactions */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-slate-100">
             <p className="text-sm font-medium text-slate-700">Recent transactions</p>
             <button
               onClick={() => router.push('/transactions')}
@@ -227,10 +267,10 @@ export default function DashboardPage() {
               <p className="text-xs text-slate-400 mt-1">Tap + to add your first one</p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-50">
+            <div className="divide-y divide-slate-100">
               {transactions.slice(0, 5).map((t) => (
-                <div key={t.id} className="flex items-center justify-between px-5 py-3.5">
-                  <div className="flex items-center gap-3 min-w-0">
+                <div key={t.id} className="flex items-center justify-between px-4 sm:px-5 py-3.5">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
                         CATEGORY_COLORS[t.category] ?? 'bg-slate-100 text-slate-700'
@@ -275,7 +315,7 @@ export default function DashboardPage() {
 
       <button
         onClick={() => setShowModal(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 active:scale-95 transition-all"
+        className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 w-14 h-14 bg-indigo-600 rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 active:scale-95 transition-all z-10"
       >
         <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
